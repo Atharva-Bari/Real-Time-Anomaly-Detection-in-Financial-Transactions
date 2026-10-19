@@ -2,6 +2,3 @@
 __pycache__/
 .pytest_cache/
 data/creditcard.csv
-outputs/models/*.pkl
-outputs/plots/*.png
-outputs/reports/*.csv

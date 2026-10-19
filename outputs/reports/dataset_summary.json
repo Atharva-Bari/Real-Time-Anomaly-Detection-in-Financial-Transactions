@@ -107,6 +107,16 @@
     "class_distribution":{
       "0":283253,
       "1":473
+    },
+    "amount_summary":{
+      "minimum":0.0,
+      "median":22.0,
+      "p75":77.51,
+      "maximum":25691.16
+    },
+    "time_summary":{
+      "minimum":0.0,
+      "maximum":172792.0
     }
   }
 ]

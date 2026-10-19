@@ -1,6 +1,7 @@
 """Streamlit dashboard for the real-time financial anomaly detection prototype."""
 from pathlib import Path
 import sys
+import json
 
 import pandas as pd
 import streamlit as st
@@ -12,6 +13,7 @@ from src.prediction import load_artifacts, predict_transaction
 ROOT = Path(__file__).resolve().parents[1]
 PLOTS, REPORTS, MODELS = ROOT / "outputs" / "plots", ROOT / "outputs" / "reports", ROOT / "outputs" / "models"
 MODEL_COMPARISON, TUNING_RESULTS = REPORTS / "model_comparison.csv", REPORTS / "threshold_results.csv"
+DATASET_SUMMARY = REPORTS / "dataset_summary.json"
 
 @st.cache_data(show_spinner=False)
 def get_dataset() -> pd.DataFrame:
@@ -25,6 +27,12 @@ def file_version(path: Path) -> int:
 def read_csv(path: str, version: int) -> pd.DataFrame:
     """Read a generated CSV, refreshing after a new training run."""
     return pd.read_csv(path)
+
+@st.cache_data(show_spinner=False)
+def read_summary(path: str, version: int) -> dict:
+    """Load aggregate statistics used when the private raw dataset is absent."""
+    with Path(path).open(encoding="utf-8") as file:
+        return json.load(file)[0]
 
 @st.cache_resource(show_spinner=False)
 def get_prediction_artifacts(version: int):
@@ -61,10 +69,15 @@ elif page == "Dataset and Class Imbalance":
     st.subheader("Dataset loading and class imbalance")
     try:
         data = get_dataset(); normal, fraud = int((data.Class == 0).sum()), int((data.Class == 1).sum())
-        first, second, third = st.columns(3); first.metric("Transactions", f"{len(data):,}"); second.metric("Normal transactions", f"{normal:,}"); third.metric("Fraud transactions", f"{fraud:,}", f"{fraud / len(data) * 100:.3f}% of dataset")
-        st.write("The target is highly imbalanced, so accuracy would be misleading; this project prioritizes precision, recall, and F1.")
-        st.dataframe(data.head(), width="stretch"); show_plot("class_distribution.png", "Normal vs. fraud transaction distribution")
-    except (FileNotFoundError, ValueError) as error: st.warning(str(error))
+        total = len(data)
+        st.dataframe(data.head(), width="stretch")
+    except (FileNotFoundError, ValueError):
+        summary = read_summary(str(DATASET_SUMMARY), file_version(DATASET_SUMMARY))
+        total, normal, fraud = int(summary["shape"][0]), int(summary["class_distribution"]["0"]), int(summary["class_distribution"]["1"])
+        st.info("The private raw CSV is not bundled with this public deployment. The metrics and plots below are precomputed from the original dataset.")
+    first, second, third = st.columns(3); first.metric("Transactions", f"{total:,}"); second.metric("Normal transactions", f"{normal:,}"); third.metric("Fraud transactions", f"{fraud:,}", f"{fraud / total * 100:.3f}% of dataset")
+    st.write("The target is highly imbalanced, so accuracy would be misleading; this project prioritizes precision, recall, and F1.")
+    show_plot("class_distribution.png", "Normal vs. fraud transaction distribution")
 
 elif page == "Preprocessing and RobustScaler":
     st.subheader("Leakage-safe preprocessing")
@@ -75,9 +88,13 @@ elif page == "Preprocessing and RobustScaler":
 - `V1` to `V28` are already PCA-transformed dataset features and are used directly for model fitting.""")
     try:
         values = get_dataset()["Amount"]
-        st.dataframe(pd.DataFrame({"Amount statistic": ["Minimum", "Median", "75th percentile", "Maximum"], "Original Amount": [values.min(), values.median(), values.quantile(.75), values.max()]}), width="stretch", hide_index=True)
-        st.info("The saved `outputs/models/amount_scaler.pkl` is the fitted RobustScaler used by real-time prediction.")
-    except (FileNotFoundError, ValueError) as error: st.warning(str(error))
+        amount_stats = [values.min(), values.median(), values.quantile(.75), values.max()]
+    except (FileNotFoundError, ValueError):
+        summary = read_summary(str(DATASET_SUMMARY), file_version(DATASET_SUMMARY))["amount_summary"]
+        amount_stats = [summary["minimum"], summary["median"], summary["p75"], summary["maximum"]]
+        st.info("Amount statistics are precomputed because the private raw CSV is not bundled with this public deployment.")
+    st.dataframe(pd.DataFrame({"Amount statistic": ["Minimum", "Median", "75th percentile", "Maximum"], "Original Amount": amount_stats}), width="stretch", hide_index=True)
+    st.info("The saved `outputs/models/amount_scaler.pkl` is the fitted RobustScaler used by real-time prediction.")
 
 elif page == "EDA":
     st.subheader("Exploratory data analysis")

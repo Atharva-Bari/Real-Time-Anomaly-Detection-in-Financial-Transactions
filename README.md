@@ -10,6 +10,10 @@ Download `creditcard.csv` from Kaggle's [Credit Card Fraud Detection dataset](ht
 
 The expected fields are `Time`, `V1` through `V28`, `Amount`, and `Class`. `Class=1` is fraud. The CSV is excluded from Git because it is large. If it is absent, `run.py` gives a clear placement message.
 
+### Public deployment without the raw CSV
+
+The public Streamlit deployment intentionally does not include `data/creditcard.csv`. It uses version-controlled aggregate statistics, generated plots, evaluation reports, and trained model artifacts produced by a verified local `python run.py` execution. The deployed dashboard can therefore demonstrate results and real-time scoring without exposing the raw dataset. To retrain locally, place the private CSV in `data/creditcard.csv` and run `python run.py`.
+
 ## Windows installation and running
 
 ```powershell

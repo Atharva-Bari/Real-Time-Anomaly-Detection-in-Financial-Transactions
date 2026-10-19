@@ -21,6 +21,12 @@ def load_creditcard_data(path: str | Path | None = None) -> pd.DataFrame:
     return frame
 
 def dataset_summary(frame: pd.DataFrame) -> dict:
+    """Create non-sensitive aggregate data for the deployed dashboard."""
+    amount = frame["Amount"]
+    time = frame["Time"]
     return {"shape": frame.shape, "columns": list(frame.columns), "dtypes": frame.dtypes.astype(str).to_dict(),
             "missing_values": frame.isna().sum().to_dict(), "duplicate_rows": int(frame.duplicated().sum()),
-            "class_distribution": frame["Class"].value_counts().sort_index().to_dict()}
+            "class_distribution": frame["Class"].value_counts().sort_index().to_dict(),
+            "amount_summary": {"minimum": float(amount.min()), "median": float(amount.median()),
+                               "p75": float(amount.quantile(.75)), "maximum": float(amount.max())},
+            "time_summary": {"minimum": float(time.min()), "maximum": float(time.max())}}
