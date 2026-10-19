@@ -1,0 +1,5 @@
+{
+  "isolation_forest_threshold": 0.6021563991711906,
+  "lof_threshold": 2.8132333388164805,
+  "selection_partition": "validation"
+}
